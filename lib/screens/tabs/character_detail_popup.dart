@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../models/novel.dart';
 import '../../models/character.dart';
 import 'package:isar/isar.dart';
+import '../../utils/permission_helper.dart';
 
 class CharacterDetailPopup extends StatefulWidget {
   final Novel novel;
@@ -61,6 +62,11 @@ class _CharacterDetailPopupState extends State<CharacterDetailPopup> {
   }
 
   Future<void> _pickImage() async {
+    final hasPermission = await PermissionHelper.requestGalleryPermission(
+      context,
+    );
+    if (!hasPermission) return;
+
     final image = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (image != null) setState(() => _imagePath = image.path);
   }

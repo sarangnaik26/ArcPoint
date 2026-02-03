@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/novel.dart';
 import '../models/novel_status.dart';
 import '../providers/novel_provider.dart';
+import '../utils/permission_helper.dart';
 
 class AddNovelPopup extends StatefulWidget {
   final Novel? novel;
@@ -45,6 +46,11 @@ class _AddNovelPopupState extends State<AddNovelPopup> {
   }
 
   Future<void> _pickImage() async {
+    final hasPermission = await PermissionHelper.requestGalleryPermission(
+      context,
+    );
+    if (!hasPermission) return;
+
     final picker = ImagePicker();
     final image = await picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
