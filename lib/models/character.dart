@@ -10,6 +10,8 @@ class Character {
   String? imagePath;
   String? role; // user-defined categories
   String? description;
+  String? age;
+  String? gender;
 
   /// Flexible status panel stored as a JSON string.
   /// Structure: `Map<String, List<Map<String, String>>>`

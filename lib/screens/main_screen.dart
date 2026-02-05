@@ -7,10 +7,7 @@ import 'bucket_list_screen.dart';
 import 'completed_screen.dart';
 import 'settings_page.dart';
 import 'global_search_screen.dart';
-import 'novel_dashboard.dart';
-import 'tabs/character_detail_popup.dart';
 import '../widgets/add_novel_popup.dart';
-import '../widgets/novel_selector_dialog.dart';
 import '../providers/theme_provider.dart';
 
 class MainScreen extends StatefulWidget {
@@ -79,7 +76,7 @@ class _MainScreenState extends State<MainScreen> {
       ),
       bottomNavigationBar: _buildFloatingBottomBar(),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showActionMenu(context),
+        onPressed: () => _showAddNovelPopup(context),
         child: const Icon(Icons.add_rounded),
       ),
     );
@@ -164,130 +161,7 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  void _showActionMenu(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        margin: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            Container(
-              width: 32,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.outlineVariant,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 8),
-            _buildActionItem(
-              context,
-              icon: Icons.book,
-              label: 'Add Novel',
-              onTap: () {
-                Navigator.pop(context);
-                _showAddNovelPopup(context);
-              },
-            ),
-            _buildActionItem(
-              context,
-              icon: Icons.person_add,
-              label: 'Add Character',
-              onTap: () {
-                Navigator.pop(context);
-                _showAddCharacterFlow(context);
-              },
-            ),
-            _buildActionItem(
-              context,
-              icon: Icons.people,
-              label: 'View Characters',
-              onTap: () {
-                Navigator.pop(context);
-                _showViewCharactersFlow(context);
-              },
-            ),
-            _buildActionItem(
-              context,
-              icon: Icons.search,
-              label: 'Search',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const GlobalSearchScreen(),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionItem(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    final theme = Theme.of(context);
-    return ListTile(
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.primaryContainer.withAlpha(100),
-          shape: BoxShape.circle,
-        ),
-        child: Icon(icon, color: theme.colorScheme.primary),
-      ),
-      title: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-      onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-    );
-  }
-
   void _showAddNovelPopup(BuildContext context) {
     showDialog(context: context, builder: (context) => const AddNovelPopup());
-  }
-
-  void _showAddCharacterFlow(BuildContext context) async {
-    final novel = await showDialog(
-      context: context,
-      builder: (context) => const NovelSelectorDialog(title: 'Select Novel'),
-    );
-
-    if (novel != null && context.mounted) {
-      showDialog(
-        context: context,
-        builder: (context) => CharacterDetailPopup(novel: novel),
-      );
-    }
-  }
-
-  void _showViewCharactersFlow(BuildContext context) async {
-    final novel = await showDialog(
-      context: context,
-      builder: (context) => const NovelSelectorDialog(title: 'Select Novel'),
-    );
-
-    if (novel != null && context.mounted) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => NovelDashboard(novel: novel, initialIndex: 1),
-        ),
-      );
-    }
   }
 }

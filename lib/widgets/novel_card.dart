@@ -81,7 +81,7 @@ class NovelCard extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           _buildStatusChip(context),
-                          ?actionButton,
+                          if (actionButton != null) actionButton!,
                         ],
                       ),
                     ],

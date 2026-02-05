@@ -6,6 +6,7 @@ import '../../models/novel.dart';
 import '../../models/character.dart';
 import 'package:isar/isar.dart';
 import '../../utils/permission_helper.dart';
+import '../../utils/image_helper.dart';
 
 class CharacterDetailPopup extends StatefulWidget {
   final Novel novel;
@@ -21,6 +22,8 @@ class _CharacterDetailPopupState extends State<CharacterDetailPopup> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _descController;
+  late TextEditingController _ageController;
+  late TextEditingController _genderController;
   String? _imagePath;
 
   // Status Panel Data Structure: List of Groups
@@ -46,6 +49,8 @@ class _CharacterDetailPopupState extends State<CharacterDetailPopup> {
     _descController = TextEditingController(
       text: widget.character?.description,
     );
+    _ageController = TextEditingController(text: widget.character?.age);
+    _genderController = TextEditingController(text: widget.character?.gender);
     _imagePath = widget.character?.imagePath;
     _selectedRole = widget.character?.role;
 
@@ -68,7 +73,16 @@ class _CharacterDetailPopupState extends State<CharacterDetailPopup> {
     if (!hasPermission) return;
 
     final image = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (image != null) setState(() => _imagePath = image.path);
+    if (image != null) {
+      final compressedFile = await ImageHelper.compressAndGetFile(
+        File(image.path),
+      );
+      if (compressedFile != null) {
+        setState(() => _imagePath = compressedFile.path);
+      } else {
+        setState(() => _imagePath = image.path);
+      }
+    }
   }
 
   void _addGroup() {
@@ -193,6 +207,31 @@ class _CharacterDetailPopupState extends State<CharacterDetailPopup> {
                   ],
                 ),
                 const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _ageController,
+                        readOnly: !_isEditing,
+                        decoration: const InputDecoration(
+                          labelText: 'Age',
+                          hintText: 'e.g. 24',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _genderController,
+                        readOnly: !_isEditing,
+                        decoration: const InputDecoration(
+                          labelText: 'Gender',
+                          hintText: 'e.g. Female',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
                 TextFormField(
                   controller: _descController,
                   readOnly: !_isEditing,
@@ -377,6 +416,8 @@ class _CharacterDetailPopupState extends State<CharacterDetailPopup> {
       final character = widget.character ?? Character();
       character.name = _nameController.text;
       character.role = _selectedRole;
+      character.age = _ageController.text;
+      character.gender = _genderController.text;
       character.description = _descController.text;
       character.imagePath = _imagePath;
       character.statusPanelJson = jsonEncode(_groups);

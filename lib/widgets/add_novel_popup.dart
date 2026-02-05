@@ -6,6 +6,7 @@ import '../models/novel.dart';
 import '../models/novel_status.dart';
 import '../providers/novel_provider.dart';
 import '../utils/permission_helper.dart';
+import '../utils/image_helper.dart';
 
 class AddNovelPopup extends StatefulWidget {
   final Novel? novel;
@@ -54,7 +55,15 @@ class _AddNovelPopupState extends State<AddNovelPopup> {
     final picker = ImagePicker();
     final image = await picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
-      setState(() => _imagePath = image.path);
+      final compressedFile = await ImageHelper.compressAndGetFile(
+        File(image.path),
+      );
+      if (compressedFile != null) {
+        setState(() => _imagePath = compressedFile.path);
+      } else {
+        // Fallback to original if compression fails
+        setState(() => _imagePath = image.path);
+      }
     }
   }
 

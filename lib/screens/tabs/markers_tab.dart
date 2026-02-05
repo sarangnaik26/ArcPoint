@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:isar/isar.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../models/novel.dart';
 import '../../models/chapter_marker.dart';
 
@@ -73,12 +74,57 @@ class MarkersTab extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                               )
                             : null,
-                        trailing: marker.externalLink != null
-                            ? IconButton(
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (marker.externalLink != null)
+                              IconButton(
                                 icon: const Icon(Icons.open_in_new, size: 20),
-                                onPressed: () {},
-                              ) // TODO: Open URL
-                            : null,
+                                onPressed: () =>
+                                    _launchUrl(context, marker.externalLink!),
+                                tooltip: 'Open Link',
+                              ),
+                            PopupMenuButton<String>(
+                              icon: const Icon(Icons.more_vert),
+                              onSelected: (value) {
+                                if (value == 'edit') {
+                                  _editMarker(context, marker);
+                                } else if (value == 'delete') {
+                                  _deleteMarker(context, marker);
+                                }
+                              },
+                              itemBuilder: (context) => [
+                                const PopupMenuItem(
+                                  value: 'edit',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.edit, size: 20),
+                                      SizedBox(width: 8),
+                                      Text('Edit'),
+                                    ],
+                                  ),
+                                ),
+                                const PopupMenuItem(
+                                  value: 'delete',
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.delete,
+                                        size: 20,
+                                        color: Colors.red,
+                                      ),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'Delete',
+                                        style: TextStyle(color: Colors.red),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   },
@@ -95,29 +141,110 @@ class MarkersTab extends StatelessWidget {
   void _addMarker(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => _AddMarkerDialog(novel: novel),
+      builder: (context) => _MarkerDialog(novel: novel),
     );
+  }
+
+  void _editMarker(BuildContext context, ChapterMarker marker) {
+    showDialog(
+      context: context,
+      builder: (context) => _MarkerDialog(novel: novel, marker: marker),
+    );
+  }
+
+  Future<void> _deleteMarker(BuildContext context, ChapterMarker marker) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Marker'),
+        content: const Text('Are you sure you want to delete this marker?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final isar = Isar.getInstance()!;
+      await isar.writeTxn(() async {
+        await isar.chapterMarkers.delete(marker.id);
+        novel.chapterMarkers.remove(
+          marker,
+        ); // Ensure local list update if needed
+        await novel.chapterMarkers.save();
+      });
+    }
+  }
+
+  Future<void> _launchUrl(BuildContext context, String urlString) async {
+    final uri = Uri.tryParse(urlString);
+    if (uri != null && await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Invalid URL: $urlString'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
   }
 }
 
-class _AddMarkerDialog extends StatefulWidget {
+class _MarkerDialog extends StatefulWidget {
   final Novel novel;
-  const _AddMarkerDialog({required this.novel});
+  final ChapterMarker? marker;
+
+  const _MarkerDialog({required this.novel, this.marker});
 
   @override
-  State<_AddMarkerDialog> createState() => _AddMarkerDialogState();
+  State<_MarkerDialog> createState() => _MarkerDialogState();
 }
 
-class _AddMarkerDialogState extends State<_AddMarkerDialog> {
+class _MarkerDialogState extends State<_MarkerDialog> {
   final _formKey = GlobalKey<FormState>();
-  final _chapterController = TextEditingController();
-  final _descController = TextEditingController();
-  final _linkController = TextEditingController();
+  late TextEditingController _chapterController;
+  late TextEditingController _descController;
+  late TextEditingController _linkController;
+
+  @override
+  void initState() {
+    super.initState();
+    _chapterController = TextEditingController(
+      text: widget.marker?.chapterNumber.toString() ?? '',
+    );
+    _descController = TextEditingController(
+      text: widget.marker?.description ?? '',
+    );
+    _linkController = TextEditingController(
+      text: widget.marker?.externalLink ?? '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _chapterController.dispose();
+    _descController.dispose();
+    _linkController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Add Chapter Marker'),
+      title: Text(
+        widget.marker == null ? 'Add Chapter Marker' : 'Edit Chapter Marker',
+      ),
       content: Form(
         key: _formKey,
         child: Column(
@@ -140,6 +267,7 @@ class _AddMarkerDialogState extends State<_AddMarkerDialog> {
               controller: _linkController,
               decoration: const InputDecoration(
                 labelText: 'External Link (Optional)',
+                hintText: 'https://example.com',
               ),
             ),
           ],
@@ -150,24 +278,35 @@ class _AddMarkerDialogState extends State<_AddMarkerDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
-        FilledButton(onPressed: _save, child: const Text('Add')),
+        FilledButton(
+          onPressed: _save,
+          child: Text(widget.marker == null ? 'Add' : 'Save'),
+        ),
       ],
     );
   }
 
   void _save() async {
     if (_formKey.currentState!.validate()) {
-      final marker = ChapterMarker()
-        ..chapterNumber = int.parse(_chapterController.text)
-        ..description = _descController.text
-        ..externalLink = _linkController.text.isNotEmpty
-            ? _linkController.text
-            : null;
-
       final isar = Isar.getInstance()!;
+
       await isar.writeTxn(() async {
-        await isar.chapterMarkers.put(marker);
-        widget.novel.chapterMarkers.add(marker);
+        final marker =
+            widget.marker ?? ChapterMarker(); // Use existing or create new
+        marker
+          ..chapterNumber = int.parse(_chapterController.text)
+          ..description = _descController.text
+          ..externalLink = _linkController.text.isNotEmpty
+              ? _linkController.text
+              : null;
+
+        if (widget.marker == null) {
+          // Verify we aren't creating a duplicate if that matters, but for now just add
+          await isar.chapterMarkers.put(marker);
+          widget.novel.chapterMarkers.add(marker);
+        } else {
+          await isar.chapterMarkers.put(marker);
+        }
         await widget.novel.chapterMarkers.save();
       });
       if (mounted) Navigator.pop(context);

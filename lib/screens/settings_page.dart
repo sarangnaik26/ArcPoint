@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 
@@ -27,16 +28,17 @@ class SettingsPage extends StatelessWidget {
           _SectionHeader(title: 'Accent Color'),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Wrap(
-              spacing: 12,
-              runSpacing: 12,
+            child: GridView.count(
+              crossAxisCount: 4,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
               children: AppAccentColor.values.map((accent) {
                 final isSelected = themeProvider.accentColor == accent;
                 return GestureDetector(
                   onTap: () => themeProvider.setAccentColor(accent),
                   child: Container(
-                    width: 50,
-                    height: 50,
                     decoration: BoxDecoration(
                       color: accent == AppAccentColor.golden
                           ? const Color(0xFFFFD700)
@@ -72,9 +74,46 @@ class SettingsPage extends StatelessWidget {
             subtitle: const Text('The exact point in a story arc.'),
             trailing: const Text('v1.0.0'),
           ),
-          const ListTile(
-            title: Text('Data Privacy'),
-            subtitle: Text('All data is stored locally on your device.'),
+          ListTile(
+            title: const Text('Privacy Policy'),
+            subtitle: const Text('View our privacy policy.'),
+            leading: const Icon(Icons.privacy_tip_outlined),
+            onTap: () async {
+              final Uri url = Uri.parse(
+                'https://sarangnaik26.github.io/ArcPoint/',
+              );
+              if (!await launchUrl(url)) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Could not launch Privacy Policy'),
+                    ),
+                  );
+                }
+              }
+            },
+          ),
+          ListTile(
+            title: const Text('Contact Us'),
+            subtitle: const Text('fairyprisme@gmail.com'),
+            leading: const Icon(Icons.email_outlined),
+            onTap: () async {
+              final Uri emailLaunchUri = Uri(
+                scheme: 'mailto',
+                path: 'fairyprisme@gmail.com',
+                query: 'subject=Support: ArcPoint',
+              );
+
+              if (!await launchUrl(emailLaunchUri)) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Could not launch email client'),
+                    ),
+                  );
+                }
+              }
+            },
           ),
         ],
       ),
